@@ -17,6 +17,15 @@ class ModelPackManifestTest {
     }
 
     @Test
+    fun parsesValidDigests() {
+        val digest = "a".repeat(64)
+        val parsed = ModelPackManifest.parse(
+            """{"formatVersion":1,"displayName":"Pack","graphs":{"unet":"unet.onnx"},"sha256":{"unet":"$digest"}}"""
+        )
+        assertEquals(digest, parsed.sha256["unet"])
+    }
+
+    @Test
     fun rejectsUnsupportedVersion() {
         assertThrows(IllegalArgumentException::class.java) {
             ModelPackManifest.parse("""{"formatVersion":2,"displayName":"Test","graphs":{"unet":"unet.onnx"}}""")
@@ -24,12 +33,25 @@ class ModelPackManifestTest {
     }
 
     @Test
-    fun rejectsPathTraversal() {
+    fun rejectsPathTraversalAndManifestAsGraph() {
         assertThrows(IllegalArgumentException::class.java) {
             ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"../unet.onnx"}}""")
         }
         assertThrows(IllegalArgumentException::class.java) {
             ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"..\\unet.onnx"}}""")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"model-manifest.json"}}""")
+        }
+    }
+
+    @Test
+    fun rejectsInvalidDigestEntries() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"unet.onnx"},"sha256":{"unet":"bad"}}""")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"unet.onnx"},"sha256":{"unknown":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}" }""")
         }
     }
 
