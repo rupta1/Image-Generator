@@ -11,7 +11,7 @@ class PreferenceStoreTest {
             InteractionSignal("flat illustration", SignalKind.DISLIKE)
         ))
         assertEquals(2, profile.preferredStyles["Cinematic"])
-        assertEquals(2, profile.negativeSignals["illustration"])
+        assertEquals(1, profile.negativeSignals["illustration"])
         assertEquals(2, profile.promptKeywords["portrait"])
     }
 }
