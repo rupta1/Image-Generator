@@ -51,7 +51,7 @@ class ModelPackManifestTest {
             ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"unet.onnx"},"sha256":{"unet":"bad"}}""")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"unet.onnx"},"sha256":{"unknown":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}" }""")
+            ModelPackManifest.parse("""{"formatVersion":1,"displayName":"Test","graphs":{"unet":"unet.onnx"},"sha256":{"unknown":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}""")
         }
     }
 
