@@ -37,7 +37,9 @@ class DdimScheduler(
         return IntArray(inferenceSteps) { i ->
             (last - (last.toDouble() * i / (inferenceSteps - 1)).roundToInt()).coerceAtLeast(0)
         }.also { steps ->
-            require(steps.zipWithNext().all { (a, b) -> a > b }) { "Timestep sequence must descend." }
+            for (i in 1 until steps.size) {
+                require(steps[i - 1] > steps[i]) { "Timestep sequence must descend." }
+            }
         }
     }
 
