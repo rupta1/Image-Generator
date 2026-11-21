@@ -36,7 +36,7 @@ class OnnxModelPack private constructor(
                     require(fileName.isNotBlank() && File(fileName).name == fileName) { "Invalid graph filename for $key." }
                     val graphFile = File(directory, fileName)
                     require(graphFile.isFile) { "Missing graph file: $fileName" }
-                    loaded[key] = env.createSession(graphFile.absolutePath, OrtSession.SessionOptions())
+                    loaded[key] = OrtSession.SessionOptions().use { options -> env.createSession(graphFile.absolutePath, options) }
                 }
                 return OnnxModelPack(env, loaded, directory)
             } catch (t: Throwable) {
