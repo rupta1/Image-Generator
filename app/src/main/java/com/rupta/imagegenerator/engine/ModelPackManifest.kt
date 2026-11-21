@@ -2,11 +2,12 @@ package com.rupta.imagegenerator.engine
 
 import org.json.JSONObject
 
-/** Basic schema validation for model-pack manifests before loading graph files. */
+/** Versioned manifest with optional SHA-256 integrity digests for graph files. */
 data class ModelPackManifest(
     val formatVersion: Int,
     val displayName: String,
-    val graphs: Map<String, String>
+    val graphs: Map<String, String>,
+    val sha256: Map<String, String> = emptyMap()
 ) {
     companion object {
         fun parse(jsonText: String): ModelPackManifest {
@@ -25,10 +26,23 @@ data class ModelPackManifest(
                 require(value.matches(Regex("[a-zA-Z0-9._-]+")) && value != "." && value != "..") {
                     "Graph paths must be safe plain filenames."
                 }
+                require(value.lowercase() != "model-manifest.json") { "Graph filename cannot be the manifest." }
                 graphMap[key] = value
             }
             require(graphMap.isNotEmpty()) { "Manifest must declare at least one graph." }
-            return ModelPackManifest(version, name, graphMap)
+            val hashObject = root.optJSONObject("sha256")
+            val hashes = mutableMapOf<String, String>()
+            if (hashObject != null) {
+                val hashKeys = hashObject.keys()
+                while (hashKeys.hasNext()) {
+                    val key = hashKeys.next()
+                    val hash = hashObject.optString(key).trim().lowercase()
+                    require(key in graphMap) { "SHA-256 entry must reference a declared graph." }
+                    require(hash.matches(Regex("[a-f0-9]{64}"))) { "Invalid SHA-256 digest." }
+                    hashes[key] = hash
+                }
+            }
+            return ModelPackManifest(version, name, graphMap, hashes)
         }
     }
 }
