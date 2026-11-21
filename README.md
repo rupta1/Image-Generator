@@ -32,7 +32,9 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Adaptive preference data model
 - [x] Initial local inference interface and request validation
 - [x] Model catalog and private storage groundwork
-- [ ] Diffusion runtime integration and validated model pack
+- [x] ONNX Runtime Android dependency and graph-session loader
+- [x] Versioned model-pack manifest validation
+- [ ] Complete diffusion pipeline orchestration (conditioning, tokenizer, scheduler, VAE) and validated model pack
 - [ ] Model download/import UI with integrity verification
 - [ ] Generation queue and real progress
 - [ ] Image-to-image
