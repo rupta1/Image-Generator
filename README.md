@@ -34,7 +34,7 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Model catalog and private storage groundwork
 - [x] ONNX Runtime Android dependency and graph-session loader
 - [x] Versioned model-pack manifest validation\n- [x] Optional SHA-256 graph integrity verification and model-folder containment checks
-- [ ] Complete diffusion pipeline orchestration (conditioning, tokenizer, scheduler, VAE) and validated model pack
+- [x] Defined diffusion pack contract (model family, tokenizer assets, scheduler config and graph tensor schemas)\n- [x] Tensor schema validation (name, declared shape and supported dtype)\n- [ ] Complete diffusion pipeline orchestration (conditioning, tokenizer, scheduler, VAE) and validated model pack
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification\n- [ ] Model download/import UI with integrity verification
 - [ ] Generation queue and real progress
 - [ ] Image-to-image
