@@ -23,7 +23,8 @@ class LocalLearning(context: Context) {
         val arr=JSONArray(prefs.getString("signals","[]"))
         return (0 until arr.length()).map { i ->
             val o=arr.getJSONObject(i)
-            InteractionSignal(o.optString("prompt"), SignalKind.valueOf(o.optString("kind")),o.optString("style").ifBlank { null },o.optLong("time"))
+            val style=o.optString("style").let { if(it.isBlank()) null else it }
+            InteractionSignal(o.optString("prompt"), SignalKind.valueOf(o.optString("kind")),style,o.optLong("time"))
         }
     }
     fun addSignal(prompt:String,kind:SignalKind,style:String?=null) {
