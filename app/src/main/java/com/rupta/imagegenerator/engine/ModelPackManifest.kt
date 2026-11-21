@@ -22,7 +22,9 @@ data class ModelPackManifest(
                 val key = keys.next()
                 val value = graphObject.optString(key).trim()
                 require(key.matches(Regex("[a-zA-Z0-9_-]+"))) { "Invalid graph identifier." }
-                require(value.isNotEmpty() && value == value.substringAfterLast('/')) { "Graph paths must be plain filenames." }
+                require(value.matches(Regex("[a-zA-Z0-9._-]+")) && value != "." && value != "..") {
+                    "Graph paths must be safe plain filenames."
+                }
                 graphMap[key] = value
             }
             require(graphMap.isNotEmpty()) { "Manifest must declare at least one graph." }
