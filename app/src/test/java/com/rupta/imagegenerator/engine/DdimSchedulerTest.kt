@@ -12,7 +12,9 @@ class DdimSchedulerTest {
         val steps = scheduler.timesteps(20)
         assertEquals(20, steps.size)
         assertTrue(steps.first() > steps.last())
-        assertTrue(steps.zipWithNext().all { (a, b) -> a > b })
+        for (i in 1 until steps.size) {
+            assertTrue("Timesteps must descend at index $i", steps[i - 1] > steps[i])
+        }
     }
 
     @Test fun oneStepUsesHighestTrainingTimestep() {
