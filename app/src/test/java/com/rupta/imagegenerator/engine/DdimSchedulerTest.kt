@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import kotlin.math.sqrt
 
 class DdimSchedulerTest {
     @Test fun producesDescendingTimesteps() {
@@ -34,9 +35,20 @@ class DdimSchedulerTest {
         assertTrue(result.values.all { it.isFinite() })
     }
 
-    @Test fun finalStepTargetsCleanSampleAlpha() {
-        val scheduler = DdimScheduler(trainTimesteps = 10, betaStart = 0.001f, betaEnd = 0.01f)
-        val sample = FloatTensorData(longArrayOf(1), floatArrayOf(1f))
+    @Test fun finalStepRecoversCleanSampleWhenNoisePredictionIsZero() {
+        val trainTimesteps = 10
+        val betaStart = 0.001f
+        val betaEnd = 0.01f
+        var alphaAtT = 1.0
+        for (i in 0 until trainTimesteps) {
+            val beta = betaStart.toDouble() +
+                (betaEnd - betaStart).toDouble() * i / (trainTimesteps - 1)
+            alphaAtT *= 1.0 - beta
+        }
+        // For x0=1 and epsilon=0, the noisy sample at t=9 is sqrt(alphaT).
+        val sampleAtT = sqrt(alphaAtT).toFloat()
+        val scheduler = DdimScheduler(trainTimesteps, betaStart, betaEnd)
+        val sample = FloatTensorData(longArrayOf(1), floatArrayOf(sampleAtT))
         val noise = FloatTensorData(longArrayOf(1), floatArrayOf(0f))
         val result = scheduler.step(sample, noise, timestep = 9, previousTimestep = -1)
         assertEquals(1f, result.values[0], 1e-5f)
