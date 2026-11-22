@@ -6,19 +6,14 @@ import ai.onnxruntime.OrtSession
 import java.io.File
 import java.security.MessageDigest
 
-/**
- * ONNX graph session loader with optional SHA-256 verification.
- * This is not yet a complete diffusion execution pipeline.
- */
+/** Loads model graph sessions using conservative CPU and memory settings for mobile devices. */
 class OnnxModelPack private constructor(
     private val environment: OrtEnvironment,
     val sessions: Map<String, OrtSession>,
     val directory: File,
     val manifest: ModelPackManifest
 ) : AutoCloseable {
-    override fun close() {
-        sessions.values.forEach { runCatching { it.close() } }
-    }
+    override fun close() { sessions.values.forEach { runCatching { it.close() } } }
 
     companion object {
         fun load(context: Context, directory: File): OnnxModelPack {
@@ -36,11 +31,14 @@ class OnnxModelPack private constructor(
                     }
                     manifest.sha256[key]?.let { expected ->
                         val actual = sha256(graphFile)
-                        require(actual.equals(expected, ignoreCase = true)) {
-                            "SHA-256 verification failed for $fileName."
-                        }
+                        require(actual.equals(expected, ignoreCase = true)) { "SHA-256 verification failed for $fileName." }
                     }
                     loaded[key] = OrtSession.SessionOptions().use { options ->
+                        options.setIntraOpNumThreads(1)
+                        options.setInterOpNumThreads(1)
+                        options.setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL)
+                        options.setMemoryPatternOptimization(false)
+                        options.setOptimizationLevel(OrtSession.SessionOptions.OptimizationLevel.BASIC_OPT)
                         env.createSession(graphFile.absolutePath, options)
                     }
                 }
@@ -50,7 +48,6 @@ class OnnxModelPack private constructor(
                 throw t
             }
         }
-
         private fun sha256(file: File): String {
             val digest = MessageDigest.getInstance("SHA-256")
             file.inputStream().use { input ->
