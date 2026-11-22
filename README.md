@@ -6,7 +6,7 @@ A native Kotlin/Jetpack Compose Android app foundation for privacy-first, on-dev
 Initial target: POCO X6 Pro (Dimensity 8350-Ultimate, Mali-G615 MC6, 8 GB RAM). Hardware acceleration and model compatibility must be benchmarked on-device.
 
 ## Current milestone
-The Create screen invokes the ONNX runtime wrapper for detected model packs, shows inference progress, supports cancellation, and displays a successful bitmap result in-session. Model-pack static preflight and graph metadata checks now run before pipeline use. Real model compatibility and actual output remain unverified on-device.
+The Create screen invokes the ONNX runtime wrapper for detected model packs, shows inference progress, supports cancellation, and displays a successful bitmap result in-session. Model-pack static preflight and graph metadata checks now run before pipeline use. The pipeline can also report prompt encoding, denoising, decode and total time, with approximate heap snapshots, through a local callback. Real model compatibility and actual output remain unverified on-device.
 
 **Real end-to-end generation remains dependent on compatible user-supplied ONNX model packs.** Model binaries are not committed and generation is not simulated.
 
@@ -14,7 +14,7 @@ The Create screen invokes the ONNX runtime wrapper for detected model packs, sho
 Open the project in Android Studio (current stable), allow Gradle sync, then run the app on an Android device.
 
 ## Local inference roadmap
-- Validate real model-pack compatibility and output correctness on a physical device
+- Validate real model-pack compatibility and output correctness on a physical device\n- Collect local stage timing and approximate heap usage for baseline runs
 - Benchmark NNAPI/GPU paths and memory use on the POCO X6 Pro
 - Add generation queue and gallery persistence
 
@@ -51,7 +51,7 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Reject unsupported scheduler types and beta schedules with explicit errors
 - [x] Validate ONNX graph names, tensor shapes and dtypes against pack contracts at runtime
 - [x] Static model-pack preflight checks for required graph, contract, tokenizer and scheduler assets
-- [ ] Validate real pack compatibility and device inference
+- [x] Add local inference stage timing and approximate heap diagnostics callback (benchmark groundwork)\n- [ ] Validate real pack compatibility and device inference
 - [ ] Generation queue and gallery persistence
 - [ ] Image-to-image
 - [ ] LoRA inference
