@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.rupta.imagegenerator.data.LocalLearning
 import com.rupta.imagegenerator.data.SignalKind
 import com.rupta.imagegenerator.engine.*
@@ -64,8 +66,29 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
     var status by remember { mutableStateOf("Choose and install a compatible model pack to generate.") }
     var result by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var cancelFlag by remember { mutableStateOf<AtomicBoolean?>(null) }
-    val installed = remember { ModelCatalog.installed(context) }
+    var installed by remember { mutableStateOf(ModelCatalog.installed(context)) }
     val model = installed.firstOrNull()
+    var importStatus by remember { mutableStateOf("") }
+    var importing by remember { mutableStateOf(false) }
+    val zipPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null && !importing) {
+            importing = true
+            importStatus = "Installing and validating model pack…"
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            ModelPackInstaller.installZip(context, "sd15-onnx-mobile", input)
+                        } ?: error("Could not open selected ZIP file.")
+                    }
+                    installed = ModelCatalog.installed(context)
+                    importStatus = "Model pack installed and preflight checks passed."
+                } catch (t: Throwable) {
+                    importStatus = "Import failed: ${t.message ?: t.javaClass.simpleName}"
+                } finally { importing = false }
+            }
+        }
+    }
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically, modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
@@ -100,10 +123,16 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
             }
         }
         Card(colors=CardDefaults.cardColors(containerColor=panel), shape=RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text("Local model",fontWeight=FontWeight.SemiBold)
-                if(model==null) Text("No catalog model pack detected. Import a compatible model pack first.",color=Color.Gray,fontSize=13.sp)
-                else Text("Detected: ${model.descriptor.name}. Runtime compatibility is checked when generation starts.",fontSize=13.sp,color=Color.LightGray)
+                if(model==null) Text("No model pack installed. Select the SD 1.5 ZIP pack to import it.",color=Color.Gray,fontSize=13.sp)
+                else Text("Installed: ${model.descriptor.name}. Import validation passed; session compatibility is checked before inference.",fontSize=13.sp,color=Color.LightGray)
+                Button(onClick={ zipPicker.launch(arrayOf("application/zip","application/octet-stream")) }, enabled=!importing, modifier=Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(8.dp)); Text(if(importing) "Importing model…" else "Import ONNX model pack (ZIP)")
+                }
+                if(importStatus.isNotBlank()) Text(importStatus,fontSize=12.sp,color=if(importStatus.startsWith("Import failed")) MaterialTheme.colorScheme.error else Color.Gray)
+                Text("The pack is large (about 3.9 GB). Ensure sufficient internal storage is available. Import copies files into app storage.",fontSize=12.sp,color=Color.Gray)
+                Text("Model licence/source: ${model?.descriptor?.licenseUrl ?: "Review the model licence before import."}",fontSize=11.sp,color=Color.Gray)
             }
         }
         if(busy) {
