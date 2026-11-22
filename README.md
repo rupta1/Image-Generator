@@ -49,7 +49,7 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification
 - [x] Load supported linear DDIM scheduler configuration from pack metadata
 - [x] Reject unsupported scheduler types and beta schedules with explicit errors
-- [ ] Validate real pack compatibility and device inference
+- [x] Validate ONNX graph names, tensor shapes and dtypes against pack contracts at runtime\n- [ ] Validate real pack compatibility and device inference
 - [ ] Generation queue and gallery persistence
 - [ ] Image-to-image
 - [ ] LoRA inference
