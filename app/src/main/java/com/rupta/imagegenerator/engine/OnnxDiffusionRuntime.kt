@@ -21,7 +21,8 @@ class OnnxDiffusionRuntime private constructor(
     fun generate(
         request: GenerationRequest,
         onProgress: (GenerationProgress) -> Unit = {},
-        isCancelled: () -> Boolean = { false }
+        isCancelled: () -> Boolean = { false },
+        onMetrics: (InferenceMetrics) -> Unit = {}
     ): Bitmap {
         val pipeline = DiffusionPipeline(
             tokenizer = tokenizerPack.tokenizer,
@@ -37,7 +38,7 @@ class OnnxDiffusionRuntime private constructor(
             vaeScale = contract.vaeScale,
             scheduler = scheduler
         )
-        return pipeline.generate(request, onProgress, isCancelled)
+        return pipeline.generate(request, onProgress, isCancelled, onMetrics)
     }
 
     override fun close() = pack.close()
