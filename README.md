@@ -47,7 +47,7 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] ONNX model-pack session runtime integration wrapper
 - [x] Create-screen runtime invocation, progress/cancel controls and result preview
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification
-- [x] Load supported linear DDIM scheduler configuration from pack metadata
+- [x] Load linear and scaled-linear DDIM scheduler configuration from pack metadata
 - [x] Reject unsupported scheduler types and beta schedules with explicit errors
 - [x] Validate ONNX graph names, tensor shapes and dtypes against pack contracts at runtime
 - [x] Static model-pack preflight checks for required graph, contract, tokenizer and scheduler assets
