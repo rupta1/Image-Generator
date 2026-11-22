@@ -49,12 +49,15 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--root",required=True,type=Path)
     ap.add_argument("--out",required=True,type=Path)
+    ap.add_argument("--unet-graph",type=Path,default=None,help="Optional alternate UNet graph (e.g. quantized graph)")
     args=ap.parse_args()
     root=args.root.resolve()
     import onnx
     locations={"text_encoder":root/"text_encoder"/"model.onnx",
                "unet":root/"unet"/"model.onnx",
                "vae_decoder":root/"vae_decoder"/"model.onnx"}
+    if args.unet_graph:
+        locations["unet"]=args.unet_graph.resolve()
     pack={}
     for k,p in locations.items():
         if not p.is_file(): raise SystemExit(f"Missing graph: {p}")
