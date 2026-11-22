@@ -80,3 +80,15 @@ python tools/validate_sd15_pack.py ~/sd15-pack.zip
 ```
 
 Use a desktop Python environment if the ONNX package cannot be installed in Termux. The audit is structural only; device inference remains unverified.
+
+
+## Experimental UNet dynamic quantization
+
+An experimental helper is available at `tools/quantize_sd15_unet.py`. It attempts dynamic weight quantization using ONNX Runtime. Quantization may take substantial RAM and storage, can fail for graphs with external tensor data, and is not yet validated on Android. It creates a separate graph and never overwrites the source. Install the Python dependencies in a suitable desktop/Linux environment (`pip install onnx onnxruntime`) and run:
+
+```sh
+python tools/quantize_sd15_unet.py --input /path/to/unet/model.onnx --output /path/to/unet-int8.onnx
+python tools/build_sd15_pack.py --root /path/to/stable-diffusion-v1-5-ONNX --unet-graph /path/to/unet-int8.onnx --out /path/to/sd15-int8-pack.zip
+```
+
+Review the quantized graph and pack, audit it, and test with device memory safeguards. This helper is experimental and does not imply Android inference support or a guaranteed reduction in peak RAM. The original pack remains untouched.
