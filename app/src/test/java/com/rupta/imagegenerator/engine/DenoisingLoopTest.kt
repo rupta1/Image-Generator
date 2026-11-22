@@ -13,7 +13,7 @@ class DenoisingLoopTest {
         val result = DenoisingLoop(DdimScheduler(trainTimesteps = 20)).run(
             latents, cond, cond, steps = 4, guidanceScale = 7f,
             predictNoise = { sample, _, _ ->
-                assertEquals(2L, sample.shape[0])
+                assertEquals(1L, sample.shape[0])
                 tensor(sample.shape, FloatArray(sample.values.size) { 0.25f })
             }, onProgress = { progress.add(it) }
         )
@@ -25,12 +25,12 @@ class DenoisingLoopTest {
     @Test fun classifierFreeGuidanceUsesUnconditionalAndConditionalBatches() {
         val latents = tensor(longArrayOf(1, 1, 1, 1), floatArrayOf(0f))
         val cond = tensor(longArrayOf(1, 1, 1), floatArrayOf(1f))
-        var captured: FloatTensorData? = null
+        val captured = mutableListOf<FloatTensorData>()
         DenoisingLoop(DdimScheduler(trainTimesteps = 10)).run(
             latents, cond, cond, steps = 1, guidanceScale = 2f,
             predictNoise = { _, _, conditioning ->
-                captured = conditioning
-                tensor(longArrayOf(2, 1, 1, 1), floatArrayOf(1f, 3f))
+                captured.add(conditioning)
+                tensor(longArrayOf(1, 1, 1, 1), floatArrayOf(if (captured.size == 1) 1f else 3f))
             }
         )
         assertEquals(2L, captured!!.shape[0])
