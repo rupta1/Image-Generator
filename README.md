@@ -56,3 +56,16 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [ ] Image-to-image
 - [ ] LoRA inference
 - [ ] Investigate on-device fine-tuning (experimental)
+
+
+## Building a pack from a local SD 1.5 ONNX export
+
+The repository includes `tools/build_sd15_pack.py`, which assembles the Diffusers ONNX export into a flat ZIP pack accepted by the app. It requires Python and ONNX (`pip install onnx`). It reads graph metadata without loading the full external tensor weights into memory, preserves referenced external-data files, generates the pipeline contract and graph SHA-256 values, and converts PNDM metadata to DDIM metadata while preserving beta schedule parameters. Review the generated contract and pack on-device; this does not prove runtime or hardware compatibility.
+
+Example:
+
+```sh
+python tools/build_sd15_pack.py --root ~/stable-diffusion-v1-5-ONNX --out ~/sd15-pack.zip
+```
+
+The pack may exceed 3 GB because the UNet graph uses external tensor data. The installer allows up to 6 GB unpacked (still bounded). Import only when sufficient storage is available. This packaging step is experimental and does not establish that generation works on-device.
