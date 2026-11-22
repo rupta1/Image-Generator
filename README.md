@@ -18,7 +18,7 @@ Open the project in Android Studio (current stable), allow Gradle sync, then run
 - Benchmark NNAPI/GPU paths and memory use on the POCO X6 Pro
 - Add generation queue and gallery persistence
 
-Model binaries are not committed. Model acquisition must be user initiated and comply with each model's licence.
+Model binaries are not committed. Model acquisition is user-initiated: the app accepts an HTTPS ZIP URL, optional SHA-256, downloads to private cache, and installs only after archive and static preflight validation. The downloader is not yet a bundled model catalogue and does not guarantee third-party pack compatibility or licensing.
 
 ## Privacy
 Prompt history and preference signals are intended to stay on device. Learning is opt-in. Model downloads, when implemented, must be user initiated and licence compliant.
@@ -52,7 +52,7 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Validate ONNX graph names, tensor shapes and dtypes against pack contracts at runtime
 - [x] Static model-pack preflight checks for required graph, contract, tokenizer and scheduler assets
 - [x] Add local inference stage timing and approximate heap diagnostics callback (benchmark groundwork)\n- [ ] Validate real pack compatibility and device inference
-- [ ] Generation queue and gallery persistence
+- [x] User-initiated HTTPS ZIP model-pack download, optional SHA-256 and staged preflight install\n- [ ] Generation queue and gallery persistence
 - [ ] Image-to-image
 - [ ] LoRA inference
 - [ ] Investigate on-device fine-tuning (experimental)
