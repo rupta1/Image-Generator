@@ -57,6 +57,7 @@ class OnnxDiffusionRuntime private constructor(
                 require(modelPack.sessions.keys.containsAll(graphKeys)) {
                     "Manifest must load every graph declared by the pipeline contract."
                 }
+                GraphCompatibilityValidator.validatePack(modelPack.sessions, contract)
                 val textSession = modelPack.sessions.getValue("text_encoder")
                 val unetSession = modelPack.sessions.getValue("unet")
                 val vaeSession = modelPack.sessions.getValue("vae_decoder")
