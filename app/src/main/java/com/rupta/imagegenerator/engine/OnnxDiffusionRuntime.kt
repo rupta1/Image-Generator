@@ -15,7 +15,8 @@ class OnnxDiffusionRuntime private constructor(
     private val unet: OnnxUnetRunner,
     private val unetAdapter: StableDiffusionUnetAdapter,
     private val vae: OnnxVaeDecoder,
-    private val contract: DiffusionPackContract
+    private val contract: DiffusionPackContract,
+    private val scheduler: DdimScheduler
 ) : AutoCloseable {
     fun generate(
         request: GenerationRequest,
@@ -33,7 +34,8 @@ class OnnxDiffusionRuntime private constructor(
             },
             decodeLatents = { latents -> vae.decode(latents) },
             latentChannels = contract.latentChannels,
-            vaeScale = contract.vaeScale
+            vaeScale = contract.vaeScale,
+            scheduler = scheduler
         )
         return pipeline.generate(request, onProgress, isCancelled)
     }
@@ -46,6 +48,11 @@ class OnnxDiffusionRuntime private constructor(
             try {
                 val tokenizerPack = LoadedTokenizerPack.load(directory)
                 val contract = tokenizerPack.contract
+                val schedulerFile = File(directory, contract.schedulerConfig)
+                require(schedulerFile.isFile && schedulerFile.canonicalFile.parentFile == directory.canonicalFile) {
+                    "Scheduler configuration file missing or outside model pack."
+                }
+                val scheduler = DdimScheduler.fromConfig(schedulerFile)
                 val graphKeys = contract.graphInterfaces.keys
                 require(modelPack.sessions.keys.containsAll(graphKeys)) {
                     "Manifest must load every graph declared by the pipeline contract."
@@ -66,7 +73,7 @@ class OnnxDiffusionRuntime private constructor(
                     OrtEnvironmentHolder.environment(), vaeSession,
                     contract.graphInterfaces.getValue("vae_decoder")
                 )
-                return OnnxDiffusionRuntime(modelPack, tokenizerPack, textEncoder, unetRunner, adapter, decoder, contract)
+                return OnnxDiffusionRuntime(modelPack, tokenizerPack, textEncoder, unetRunner, adapter, decoder, contract, scheduler)
             } catch (t: Throwable) {
                 modelPack.close()
                 throw t
