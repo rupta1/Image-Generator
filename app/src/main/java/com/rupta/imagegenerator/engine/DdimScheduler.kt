@@ -1,6 +1,8 @@
 package com.rupta.imagegenerator.engine
 
-import kotlin.math.sqrt\nimport org.json.JSONObject\nimport java.io.File
+import kotlin.math.sqrt
+import org.json.JSONObject
+import java.io.File
 
 /**
  * Minimal DDIM scheduler for epsilon-prediction models with a linear beta schedule.
