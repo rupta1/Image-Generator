@@ -1,6 +1,6 @@
 package com.rupta.imagegenerator.engine
 
-import kotlin.math.sqrt
+import kotlin.math.sqrt\nimport org.json.JSONObject\nimport java.io.File
 
 /**
  * Minimal DDIM scheduler for epsilon-prediction models with a linear beta schedule.
@@ -27,6 +27,24 @@ class DdimScheduler(
             cumulative[i] = product
         }
         cumulative
+    }
+
+    companion object {
+        /** Reads common Diffusers scheduler JSON fields; unsupported schedule types are rejected. */
+        fun fromConfig(file: File): DdimScheduler {
+            require(file.isFile) { "Scheduler configuration file is missing." }
+            val json = JSONObject(file.readText())
+            val type = json.optString("scheduler_type", json.optString("_class_name", "DDIMScheduler"))
+            require(type.equals("DDIMScheduler", ignoreCase = true) || type.equals("ddim", ignoreCase = true)) {
+                "Only DDIM scheduler configurations are supported."
+            }
+            val trainTimesteps = json.optInt("num_train_timesteps", 1000)
+            val betaStart = json.optDouble("beta_start", 0.00085).toFloat()
+            val betaEnd = json.optDouble("beta_end", 0.012).toFloat()
+            val betaSchedule = json.optString("beta_schedule", "linear")
+            require(betaSchedule == "linear") { "Only linear beta schedules are currently supported." }
+            return DdimScheduler(trainTimesteps, betaStart, betaEnd)
+        }
     }
 
     /** Returns monotonically descending training timesteps for the requested inference count. */
