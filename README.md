@@ -6,9 +6,9 @@ A native Kotlin/Jetpack Compose Android app foundation for privacy-first, on-dev
 Initial target: POCO X6 Pro (Dimensity 8350-Ultimate, Mali-G615 MC6, 8 GB RAM). Hardware acceleration and model compatibility must be benchmarked on-device.
 
 ## Current milestone
-Includes the app UI, local prompt/settings architecture, gallery shell, adaptive preference data layer, model management foundations, tokenizer, ONNX graph runners, deterministic DDIM, seeded latents, VAE decoder and pipeline orchestration. A runtime wrapper now connects model-pack sessions to the coordinator.
+The Create screen now invokes the ONNX runtime wrapper for detected model packs, shows inference progress, supports cancellation, and displays a successful bitmap result in-session. Compatibility and actual output remain unverified on-device.
 
-**Real end-to-end generation remains unverified on-device and depends on compatible user-supplied ONNX model packs.** Model binaries are not committed and generation is not simulated.
+**Real end-to-end generation remains dependent on compatible user-supplied ONNX model packs.** Model binaries are not committed and generation is not simulated.
 
 ## Build
 Open the project in Android Studio (current stable), allow Gradle sync, then run the app on an Android device.
@@ -16,7 +16,7 @@ Open the project in Android Studio (current stable), allow Gradle sync, then run
 ## Local inference roadmap
 - Validate real model-pack compatibility and output correctness
 - Benchmark NNAPI/GPU paths and memory use on the POCO X6 Pro
-- Wire generation UI, queue, progress and gallery persistence
+- Add generation queue and gallery persistence
 
 Model binaries are not committed. Model acquisition must be user initiated and comply with each model's licence.
 
@@ -45,9 +45,10 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Stable Diffusion UNet adapter mapping common sample, timestep and conditioning inputs
 - [x] Pipeline coordinator for prompt encoding, seeded latents, denoising, decode callback, progress and cancellation
 - [x] ONNX model-pack session runtime integration wrapper
+- [x] Create-screen runtime invocation, progress/cancel controls and result preview
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification
 - [ ] Validate real pack compatibility and device inference
-- [ ] Generation UI integration, queue and gallery persistence
+- [ ] Generation queue and gallery persistence
 - [ ] Image-to-image
 - [ ] LoRA inference
 - [ ] Investigate on-device fine-tuning (experimental)
