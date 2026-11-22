@@ -11,11 +11,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.platform.LocalContext
 import com.rupta.imagegenerator.data.LocalLearning
 import com.rupta.imagegenerator.data.SignalKind
+import com.rupta.imagegenerator.engine.*
+import kotlinx.coroutines.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val violet = Color(0xFFB7A2FF)
 private val panel = Color(0xFF191922)
@@ -32,14 +36,9 @@ fun ImageGeneratorApp() {
     var seed by remember { mutableStateOf(store.loadSeed()) }
     var learning by remember { mutableStateOf(store.learningEnabled()) }
     var signalCount by remember { mutableIntStateOf(store.signals().size) }
-    var snackbar by remember { mutableStateOf("") }
-
-    fun record(kind:SignalKind, style:String?=null) {
-        store.addSignal(prompt,kind,style); signalCount=store.signals().size
-    }
+    fun record(kind:SignalKind, style:String?=null) { store.addSignal(prompt,kind,style); signalCount=store.signals().size }
     Scaffold(
         containerColor = Color(0xFF0B0B10),
-        snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
         bottomBar = {
             NavigationBar(containerColor = Color(0xFF121219)) {
                 NavigationBarItem(selected = tab==0, onClick={tab=0}, icon={Icon(Icons.Default.AutoAwesome,"Create")}, label={Text("Create")})
@@ -49,7 +48,7 @@ fun ImageGeneratorApp() {
         }
     ) { pad ->
         when(tab) {
-            0 -> CreateScreen(Modifier.padding(pad), prompt, {prompt=it;store.savePrompt(it)}, negative, {negative=it;store.saveNegative(it)}, steps, {steps=it;store.saveSteps(it)}, size, {size=it;store.saveSize(it)}, seed, {seed=it;store.saveSeed(it)}, onSignal={record(it)}, onStatus={snackbar=it})
+            0 -> CreateScreen(Modifier.padding(pad), prompt, {prompt=it;store.savePrompt(it)}, negative, {negative=it;store.saveNegative(it)}, steps, {steps=it;store.saveSteps(it)}, size, {size=it;store.saveSize(it)}, seed, {seed=it;store.saveSeed(it)}, onSignal={record(it)})
             1 -> GalleryScreen(Modifier.padding(pad))
             else -> PersonalizeScreen(Modifier.padding(pad), learning, {learning=it;store.setLearning(it)}, signalCount, store.profile().preferredStyles, store.profile().promptKeywords, store.profile().negativeSignals, onClear={store.clearLearning();signalCount=0})
         }
@@ -57,12 +56,21 @@ fun ImageGeneratorApp() {
 }
 
 @Composable
-private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->Unit, negative:String, onNegative:(String)->Unit, steps:Float, onSteps:(Float)->Unit, size:String, onSize:(String)->Unit, seed:String, onSeed:(String)->Unit, onSignal:(SignalKind)->Unit, onStatus:(String)->Unit) {
+private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->Unit, negative:String, onNegative:(String)->Unit, steps:Float, onSteps:(Float)->Unit, size:String, onSize:(String)->Unit, seed:String, onSeed:(String)->Unit, onSignal:(SignalKind)->Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf(GenerationProgress(0,0,"")) }
+    var status by remember { mutableStateOf("Choose and install a compatible model pack to generate.") }
+    var result by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var cancelFlag by remember { mutableStateOf<AtomicBoolean?>(null) }
+    val installed = remember { ModelCatalog.installed(context) }
+    val model = installed.firstOrNull()
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically, modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
                 Text("IMAGE STUDIO", color=violet, letterSpacing=3.sp, fontSize=11.sp, fontWeight=FontWeight.Bold)
-                Text("Create something\nextraordinary.", fontSize=29.sp, fontWeight=FontWeight.Bold, lineHeight=34.sp)
+                Text("Create something\\nextraordinary.", fontSize=29.sp, fontWeight=FontWeight.Bold, lineHeight=34.sp)
             }
             Box(Modifier.size(46.dp).clip(CircleShape).background(panel), contentAlignment=Alignment.Center) { Icon(Icons.Default.Bolt, "Local", tint=violet) }
         }
@@ -84,30 +92,76 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
                 Text("Generation settings", fontWeight=FontWeight.SemiBold)
                 Text("Image size", color=Color.Gray)
                 Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    listOf("512 × 512","512 × 768","768 × 512").forEach { value ->
-                        FilterChip(selected=size==value, onClick={onSize(value)}, label={Text(value)})
-                    }
+                    listOf("512 × 512","512 × 768","768 × 512").forEach { value -> FilterChip(selected=size==value, onClick={onSize(value)}, label={Text(value)}) }
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) { Text("Steps", Modifier.weight(1f)); Text(steps.toInt().toString(), color=violet) }
                 Slider(value=steps, onValueChange=onSteps, valueRange=10f..30f, steps=19)
                 OutlinedTextField(seed, onSeed, modifier=Modifier.fillMaxWidth(), label={Text("Seed (optional)")}, placeholder={Text("Random seed")})
             }
         }
-        Button(onClick={onStatus("The local diffusion engine is not integrated yet. No image was fabricated.")}, modifier=Modifier.fillMaxWidth().height(56.dp), shape=RoundedCornerShape(18.dp), colors=ButtonDefaults.buttonColors(containerColor=violet, contentColor=Color.Black)) {
-            Icon(Icons.Default.AutoAwesome, null); Spacer(Modifier.width(10.dp)); Text("Generate image", fontWeight=FontWeight.Bold)
+        Card(colors=CardDefaults.cardColors(containerColor=panel), shape=RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("Local model",fontWeight=FontWeight.SemiBold)
+                if(model==null) Text("No catalog model pack detected. Import a compatible model pack first.",color=Color.Gray,fontSize=13.sp)
+                else Text("Detected: ${model.descriptor.name}. Runtime compatibility is checked when generation starts.",fontSize=13.sp,color=Color.LightGray)
+            }
+        }
+        if(busy) {
+            Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF241D35)),shape=RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(progress.message.ifBlank { "Preparing model…" },fontWeight=FontWeight.Medium)
+                    LinearProgressIndicator(progress=progress.fraction,modifier=Modifier.fillMaxWidth())
+                    Text("${progress.step} / ${progress.totalSteps} steps",fontSize=12.sp,color=Color.Gray)
+                    OutlinedButton(onClick={cancelFlag?.set(true)},modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Close,null);Spacer(Modifier.width(8.dp));Text("Cancel generation") }
+                }
+            }
+        } else {
+            Button(enabled=prompt.isNotBlank() && model!=null, onClick={
+                val chosen=model
+                if(chosen==null) status="No compatible installed model pack was found."
+                else {
+                    busy=true; result=null; status="Loading model and generating…"
+                    val flag=AtomicBoolean(false); cancelFlag=flag
+                    val dimensions=size.split("×").map { it.trim().toIntOrNull() ?: 512 }
+                    val width=dimensions.getOrElse(0){512}; val height=dimensions.getOrElse(1){512}
+                    val parsedSeed=seed.trim().toLongOrNull()
+                    scope.launch {
+                        try {
+                            val bitmap=withContext(Dispatchers.IO) {
+                                OnnxDiffusionRuntime.load(context,chosen.directory).use { runtime ->
+                                    runtime.generate(GenerationRequest(prompt,negative,width,height,steps.toInt(),parsedSeed),
+                                        onProgress={ p -> progress=p },isCancelled={flag.get()})
+                                }
+                            }
+                            result=bitmap;status="Image generated locally."
+                        } catch(e:CancellationException) { status="Generation cancelled." }
+                        catch(t:Throwable) { status="Generation failed: ${t.message ?: t.javaClass.simpleName}" }
+                        finally { busy=false;cancelFlag=null }
+                    }
+                }
+            }, modifier=Modifier.fillMaxWidth().height(56.dp),shape=RoundedCornerShape(18.dp),colors=ButtonDefaults.buttonColors(containerColor=violet,contentColor=Color.Black)) {
+                Icon(Icons.Default.AutoAwesome,null);Spacer(Modifier.width(10.dp));Text("Generate image",fontWeight=FontWeight.Bold)
+            }
+        }
+        Text(status,fontSize=13.sp,color=if(status.startsWith("Generation failed")) MaterialTheme.colorScheme.error else Color.Gray)
+        result?.let { bitmap ->
+            Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(24.dp)) {
+                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text("Generated image",fontWeight=FontWeight.SemiBold)
+                    Image(bitmap.asImageBitmap(),contentDescription="Generated image",modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
+                    Text("This result is currently held in memory; gallery saving is a later milestone.",fontSize=12.sp,color=Color.Gray)
+                }
+            }
         }
         Text("Feedback signals",color=Color.Gray,fontSize=12.sp)
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()) {
             OutlinedButton(onClick={onSignal(SignalKind.LIKE)},modifier=Modifier.weight(1f)) { Icon(Icons.Default.Favorite,null);Spacer(Modifier.width(4.dp));Text("Like prompt") }
             OutlinedButton(onClick={onSignal(SignalKind.SAVE)},modifier=Modifier.weight(1f)) { Icon(Icons.Default.BookmarkAdd,null);Spacer(Modifier.width(4.dp));Text("Save idea") }
         }
-        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF241D35)), shape=RoundedCornerShape(18.dp)) {
-            Row(Modifier.padding(14.dp), verticalAlignment=Alignment.CenterVertically) {
-                Icon(Icons.Default.Memory, null, tint=violet); Spacer(Modifier.width(10.dp))
-                Column {
-                    Text("On-device AI engine", fontWeight=FontWeight.SemiBold)
-                    Text("Inference integration is in development. This app does not simulate generation.", fontSize=12.sp, color=Color.LightGray)
-                }
+        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF241D35)),shape=RoundedCornerShape(18.dp)) {
+            Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically) {
+                Icon(Icons.Default.Memory,null,tint=violet);Spacer(Modifier.width(10.dp))
+                Column { Text("On-device AI engine",fontWeight=FontWeight.SemiBold);Text("Generation uses the installed ONNX pack and runs locally; pack compatibility and device performance depend on model format.",fontSize=12.sp,color=Color.LightGray) }
             }
         }
     }
@@ -115,14 +169,14 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
 
 @Composable
 private fun GalleryScreen(modifier:Modifier) {
-    Column(modifier.fillMaxSize().padding(20.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Text("YOUR GALLERY", color=violet, fontSize=11.sp, letterSpacing=3.sp)
-        Text("Creations", fontSize=28.sp, fontWeight=FontWeight.Bold)
-        Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
-            Column(horizontalAlignment=Alignment.CenterHorizontally, verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.ImageSearch, null, tint=violet, modifier=Modifier.size(56.dp))
-                Text("No generated images yet", fontWeight=FontWeight.SemiBold)
-                Text("Once local inference is integrated, images and metadata will be saved here.", color=Color.Gray, fontSize=13.sp)
+    Column(modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Text("YOUR GALLERY",color=violet,fontSize=11.sp,letterSpacing=3.sp)
+        Text("Creations",fontSize=28.sp,fontWeight=FontWeight.Bold)
+        Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+            Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.ImageSearch,null,tint=violet,modifier=Modifier.size(56.dp))
+                Text("No generated images yet",fontWeight=FontWeight.SemiBold)
+                Text("Gallery persistence will be added in a later milestone.",color=Color.Gray,fontSize=13.sp)
             }
         }
     }
@@ -130,34 +184,23 @@ private fun GalleryScreen(modifier:Modifier) {
 
 @Composable
 private fun PersonalizeScreen(modifier:Modifier, learning:Boolean, onLearning:(Boolean)->Unit, count:Int, styles:Map<String,Int>, keywords:Map<String,Int>, negative:Map<String,Int>, onClear:()->Unit) {
-    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        Text("PERSONAL AI", color=violet, fontSize=11.sp, letterSpacing=3.sp)
-        Text("Learns your style.", fontSize=28.sp, fontWeight=FontWeight.Bold)
-        Card(colors=CardDefaults.cardColors(containerColor=panel), shape=RoundedCornerShape(24.dp)) {
-            Column(Modifier.padding(18.dp), verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                Row(verticalAlignment=Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) { Text("Adaptive learning", fontWeight=FontWeight.Bold); Text("Collect preference signals locally.", fontSize=13.sp, color=Color.Gray) }
-                    Switch(learning, onLearning)
-                }
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Text("PERSONAL AI",color=violet,fontSize=11.sp,letterSpacing=3.sp)
+        Text("Learns your style.",fontSize=28.sp,fontWeight=FontWeight.Bold)
+        Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(24.dp)) {
+            Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Adaptive learning",fontWeight=FontWeight.Bold);Text("Collect preference signals locally.",fontSize=13.sp,color=Color.Gray) };Switch(learning,onLearning) }
                 HorizontalDivider(color=Color.DarkGray)
                 Text("Collected signals: $count",color=violet,fontWeight=FontWeight.Medium)
-                PreferenceSection("Liked styles",styles)
-                PreferenceSection("Prompt keywords",keywords)
-                PreferenceSection("Avoid signals",negative)
+                PreferenceSection("Liked styles",styles);PreferenceSection("Prompt keywords",keywords);PreferenceSection("Avoid signals",negative)
                 OutlinedButton(onClick=onClear,modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.DeleteOutline,null);Spacer(Modifier.width(8.dp));Text("Clear learned signals") }
             }
         }
-        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF241D35)), shape=RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text("Privacy by design", fontWeight=FontWeight.Bold)
-                Text("Preference signals are stored locally. This prototype learns from explicit feedback; actual model fine-tuning is not yet available.", color=Color.LightGray, fontSize=13.sp)
-            }
+        Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF241D35)),shape=RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Text("Privacy by design",fontWeight=FontWeight.Bold);Text("Preference signals are stored locally. This prototype learns from explicit feedback; actual model fine-tuning is not yet available.",color=Color.LightGray,fontSize=13.sp) }
         }
-        Card(colors=CardDefaults.cardColors(containerColor=panel), shape=RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                LearningItem("Personal adapter", "Experimental fine-tuning roadmap", Icons.Default.Memory)
-                LearningItem("Model updates", "Model management is not yet implemented", Icons.Default.CloudDownload)
-            }
+        Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { LearningItem("Personal adapter","Experimental fine-tuning roadmap",Icons.Default.Memory);LearningItem("Model updates","Model management is not yet implemented",Icons.Default.CloudDownload) }
         }
     }
 }
@@ -172,10 +215,9 @@ private fun PreferenceSection(title:String,data:Map<String,Int>) {
 }
 
 @Composable
-private fun LearningItem(title:String, subtitle:String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+private fun LearningItem(title:String,subtitle:String,icon:androidx.compose.ui.graphics.vector.ImageVector) {
     Row(verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF292432)), contentAlignment=Alignment.Center) { Icon(icon, null, tint=violet) }
-        Spacer(Modifier.width(12.dp))
-        Column { Text(title, fontWeight=FontWeight.Medium); Text(subtitle, fontSize=12.sp, color=Color.Gray) }
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF292432)),contentAlignment=Alignment.Center) { Icon(icon,null,tint=violet) }
+        Spacer(Modifier.width(12.dp));Column { Text(title,fontWeight=FontWeight.Medium);Text(subtitle,fontSize=12.sp,color=Color.Gray) }
     }
 }
