@@ -115,10 +115,10 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
                 Text("Generation settings", fontWeight=FontWeight.SemiBold)
                 Text("Image size", color=Color.Gray)
                 Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    listOf("512 × 512","512 × 768","768 × 512").forEach { value -> FilterChip(selected=size==value, onClick={onSize(value)}, label={Text(value)}) }
+                    listOf("256 × 256","256 × 384","384 × 256").forEach { value -> FilterChip(selected=size==value, onClick={onSize(value)}, label={Text(value)}) }
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) { Text("Steps", Modifier.weight(1f)); Text(steps.toInt().toString(), color=violet) }
-                Slider(value=steps, onValueChange=onSteps, valueRange=10f..30f, steps=19)
+                Slider(value=steps.coerceIn(5f,10f), onValueChange=onSteps, valueRange=5f..10f, steps=4)
                 OutlinedTextField(seed, onSeed, modifier=Modifier.fillMaxWidth(), label={Text("Seed (optional)")}, placeholder={Text("Random seed")})
             }
         }
@@ -158,7 +158,7 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
                         try {
                             val bitmap=withContext(Dispatchers.IO) {
                                 OnnxDiffusionRuntime.load(context,chosen.directory).use { runtime ->
-                                    runtime.generate(GenerationRequest(prompt,negative,width,height,steps.toInt(),parsedSeed),
+                                    runtime.generate(GenerationRequest(prompt,negative,width,height,steps.toInt().coerceIn(5,10),parsedSeed),
                                         onProgress={ p -> progress=p },isCancelled={flag.get()})
                                 }
                             }
