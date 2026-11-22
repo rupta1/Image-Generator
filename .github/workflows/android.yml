@@ -25,6 +25,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
+      - name: Validate quantization tool CLI
+        run: python3 tools/quantize_sd15_unet.py --help
       - name: Build and test
         run: gradle assembleDebug test
       - name: Upload debug APK
