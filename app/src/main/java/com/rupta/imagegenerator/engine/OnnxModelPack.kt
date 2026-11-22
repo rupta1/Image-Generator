@@ -38,7 +38,7 @@ class OnnxModelPack private constructor(
                         options.setInterOpNumThreads(1)
                         options.setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL)
                         options.setMemoryPatternOptimization(false)
-                        options.setOptimizationLevel(OrtSession.SessionOptions.OptimizationLevel.BASIC_OPT)
+                        options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT)
                         env.createSession(graphFile.absolutePath, options)
                     }
                 }
