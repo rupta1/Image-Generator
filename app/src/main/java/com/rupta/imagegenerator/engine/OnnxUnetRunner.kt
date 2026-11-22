@@ -69,7 +69,7 @@ class OnnxUnetRunner(
 
 
 /** Helper that maps common Stable Diffusion UNet input names to tensors for the denoising loop. */
-class StableDiffusionUnetAdapter(private val runner: OnnxUnetRunner, private val contract: GraphInterfaceContract) {
+class StableDiffusionUnetAdapter(private val runner: OnnxUnetRunner?, private val contract: GraphInterfaceContract) {
     fun mapInputs(sample: FloatTensorData, timestep: Int, conditioning: FloatTensorData): Map<String, FloatTensorData> = contract.inputs.associate { spec ->
         val lower = spec.name.lowercase()
         val payload = when {
@@ -83,7 +83,7 @@ class StableDiffusionUnetAdapter(private val runner: OnnxUnetRunner, private val
     }
 
     fun predict(sample: FloatTensorData, timestep: Int, conditioning: FloatTensorData): FloatTensorData {
-        val result = runner.predict(mapInputs(sample, timestep, conditioning))
+        val result = requireNotNull(runner) { "UNet runner is not attached." }.predict(mapInputs(sample, timestep, conditioning))
         return FloatTensorData(result.shape, result.values)
     }
 }
