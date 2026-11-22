@@ -60,7 +60,8 @@ object ModelPackInstaller {
                     require(sha256(graph) == expected) { "SHA-256 verification failed for $filename." }
                 }
             }
-            ModelPackPreflight.inspect(staging)\n            require(staging.renameTo(destination)) { "Could not finalize model installation." }
+            ModelPackPreflight.inspect(staging)
+            require(staging.renameTo(destination)) { "Could not finalize model installation." }
             return destination
         } catch (t: Throwable) {
             staging.deleteRecursively()
