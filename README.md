@@ -42,7 +42,7 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] ONNX text-encoder tensor runner foundation
 - [x] ONNX UNet runner and float tensor validation foundation
 - [x] Deterministic DDIM scheduler and descending inference timestep generation
-- [x] Core DDIM denoising-loop orchestration with classifier-free guidance, progress callbacks and cancellation checks\n- [ ] Complete diffusion pipeline orchestration (graph adapters, latent initialization, VAE decoding) and validated model pack
+- [x] Core DDIM denoising-loop orchestration with classifier-free guidance, progress callbacks and cancellation checks\n- [x] Seeded latent-noise initialization and float32 VAE decoder foundation (pipeline wiring pending)\n- [ ] Complete diffusion pipeline orchestration (graph adapters, end-to-end wiring) and validated model pack
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification
 - [ ] Model download/import UI with integrity verification
 - [ ] Generation queue and real progress
