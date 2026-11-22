@@ -47,6 +47,7 @@ class OnnxDiffusionRuntime private constructor(
         fun load(context: Context, directory: File): OnnxDiffusionRuntime {
             // Validate all non-graph assets and contract consistency before allocating ONNX sessions.
             ModelPackPreflight.inspect(directory)
+            MemorySafety.requireSafeToLoad(context)
             val modelPack = OnnxModelPack.load(context, directory)
             try {
                 val tokenizerPack = LoadedTokenizerPack.load(directory)
