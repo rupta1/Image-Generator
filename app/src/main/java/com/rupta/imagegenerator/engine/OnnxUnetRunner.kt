@@ -66,3 +66,23 @@ class OnnxUnetRunner(
         }
     }
 }
+
+
+/** Helper that maps common Stable Diffusion UNet input names to tensors for the denoising loop. */
+class StableDiffusionUnetAdapter(private val runner: OnnxUnetRunner, private val contract: GraphInterfaceContract) {
+    fun predict(sample: FloatTensorData, timestep: Int, conditioning: FloatTensorData): FloatTensorData {
+        val payloads = contract.inputs.associate { spec ->
+            val lower = spec.name.lowercase()
+            val payload = when {
+                lower.contains("sample") || lower.contains("latent") -> sample
+                lower.contains("timestep") || lower == "time" -> FloatTensorData(longArrayOf(1), floatArrayOf(timestep.toFloat()))
+                lower.contains("encoder") || lower.contains("hidden") || lower.contains("condition") -> conditioning
+                else -> error("Unsupported UNet input name: ${spec.name}")
+            }
+            require(spec.validateShape(payload.shape)) { "Mapped input shape does not match contract: ${spec.name}" }
+            spec.name to payload
+        }
+        val result = runner.predict(payloads)
+        return FloatTensorData(result.shape, result.values)
+    }
+}
