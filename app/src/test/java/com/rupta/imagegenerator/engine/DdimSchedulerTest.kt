@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.io.File
 import kotlin.math.sqrt
 
 class DdimSchedulerTest {
@@ -62,4 +63,28 @@ class DdimSchedulerTest {
             scheduler.step(sample, noise, timestep = 9, previousTimestep = 4)
         }
     }
+    @Test fun loadsLinearSchedulerConfiguration() {
+        val file = File.createTempFile("scheduler", ".json")
+        try {
+            file.writeText("""{"_class_name":"DDIMScheduler","num_train_timesteps":50,"beta_start":0.001,"beta_end":0.02,"beta_schedule":"linear"}""")
+            assertEquals(50, DdimScheduler.fromConfig(file).timesteps(50).size)
+        } finally { file.delete() }
+    }
+
+    @Test fun rejectsUnsupportedSchedulerConfiguration() {
+        val file = File.createTempFile("scheduler", ".json")
+        try {
+            file.writeText("""{"_class_name":"EulerScheduler","beta_schedule":"linear"}""")
+            assertThrows(IllegalArgumentException::class.java) { DdimScheduler.fromConfig(file) }
+        } finally { file.delete() }
+    }
+
+    @Test fun rejectsUnsupportedBetaSchedule() {
+        val file = File.createTempFile("scheduler", ".json")
+        try {
+            file.writeText("""{"_class_name":"DDIMScheduler","beta_schedule":"scaled_linear"}""")
+            assertThrows(IllegalArgumentException::class.java) { DdimScheduler.fromConfig(file) }
+        } finally { file.delete() }
+    }
+
 }
