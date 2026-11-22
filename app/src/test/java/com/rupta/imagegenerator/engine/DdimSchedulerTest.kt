@@ -79,7 +79,7 @@ class DdimSchedulerTest {
         } finally { file.delete() }
     }
 
-    @Test fun rejectsUnsupportedBetaSchedule() {
+    @Test fun loadsScaledLinearBetaSchedule() {\n        val file = File.createTempFile("scheduler", ".json")\n        try {\n            file.writeText("""{"_class_name":"DDIMScheduler","num_train_timesteps":1000,"beta_start":0.00085,"beta_end":0.012,"beta_schedule":"scaled_linear"}""")\n            assertEquals(20, DdimScheduler.fromConfig(file).timesteps(20).size)\n        } finally { file.delete() }\n    }\n\n    @Test fun rejectsUnsupportedBetaSchedule() {
         val file = File.createTempFile("scheduler", ".json")
         try {
             file.writeText("""{"_class_name":"DDIMScheduler","beta_schedule":"scaled_linear"}""")
