@@ -90,7 +90,7 @@ class DdimSchedulerTest {
     @Test fun rejectsUnsupportedBetaSchedule() {
         val file = File.createTempFile("scheduler", ".json")
         try {
-            file.writeText("""{"_class_name":"DDIMScheduler","beta_schedule":"scaled_linear"}""")
+            file.writeText("""{"_class_name":"DDIMScheduler","beta_schedule":"sigmoid"}""")
             assertThrows(IllegalArgumentException::class.java) { DdimScheduler.fromConfig(file) }
         } finally { file.delete() }
     }
