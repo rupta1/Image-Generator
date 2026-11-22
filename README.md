@@ -47,6 +47,8 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] ONNX model-pack session runtime integration wrapper
 - [x] Create-screen runtime invocation, progress/cancel controls and result preview
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification
+- [x] Load supported linear DDIM scheduler configuration from pack metadata
+- [x] Reject unsupported scheduler types and beta schedules with explicit errors
 - [ ] Validate real pack compatibility and device inference
 - [ ] Generation queue and gallery persistence
 - [ ] Image-to-image
