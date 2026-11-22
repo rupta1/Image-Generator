@@ -11,7 +11,7 @@ import java.util.zip.ZipInputStream
  * ZIP entries are restricted to flat filenames; unpacked size and entry count are bounded.
  */
 object ModelPackInstaller {
-    private const val MAX_UNPACKED_BYTES = 3L * 1024L * 1024L * 1024L
+    private const val MAX_UNPACKED_BYTES = 6L * 1024L * 1024L * 1024L
     private const val MAX_ENTRIES = 128
 
     fun installZip(context: Context, modelId: String, input: InputStream): File {
