@@ -41,7 +41,7 @@ class DiffusionPipelineTest {
             assertEquals("decoder reached", e.message)
         }
         assertEquals(2, encodeCalls)
-        assertEquals(2, predictCalls)
+        assertEquals(4, predictCalls)
         assertNotNull(decodeLatents)
         assertArrayEquals(longArrayOf(1, 4, 32, 32), decodeLatents!!.shape)
     }
