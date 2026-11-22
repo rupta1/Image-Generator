@@ -33,8 +33,11 @@ class DenoisingLoopTest {
                 tensor(longArrayOf(1, 1, 1, 1), floatArrayOf(if (captured.size == 1) 1f else 3f))
             }
         )
-        assertEquals(2L, captured!!.shape[0])
-        assertArrayEquals(floatArrayOf(1f, 1f), captured!!.values, 0f)
+        assertEquals(2, captured.size)
+        assertEquals(1L, captured[0].shape[0])
+        assertEquals(1L, captured[1].shape[0])
+        assertArrayEquals(cond.values, captured[0].values, 0f)
+        assertArrayEquals(cond.values, captured[1].values, 0f)
     }
 
     @Test fun cancellationIsCheckedBeforeEachStep() {
