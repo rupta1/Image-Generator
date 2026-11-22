@@ -6,17 +6,17 @@ A native Kotlin/Jetpack Compose Android app foundation for privacy-first, on-dev
 Initial target: POCO X6 Pro (Dimensity 8350-Ultimate, Mali-G615 MC6, 8 GB RAM). Hardware acceleration and model compatibility must be benchmarked on-device.
 
 ## Current milestone
-The app includes native UI, local prompt/settings persistence architecture, gallery shell, adaptive-preference data layer, model-management foundations, tokenizer, ONNX text encoder and UNet runners, deterministic DDIM scheduler, seeded latent generation, VAE decoder foundation, and a tested orchestration coordinator.
+Includes the app UI, local prompt/settings architecture, gallery shell, adaptive preference data layer, model management foundations, tokenizer, ONNX graph runners, deterministic DDIM, seeded latents, VAE decoder and pipeline orchestration. A runtime wrapper now connects model-pack sessions to the coordinator.
 
-**The coordinator is not yet wired to a validated ONNX model-pack loader, and real end-to-end inference has not been verified on-device.** The app does not simulate image generation. Model weights are not committed.
+**Real end-to-end generation remains unverified on-device and depends on compatible user-supplied ONNX model packs.** Model binaries are not committed and generation is not simulated.
 
 ## Build
 Open the project in Android Studio (current stable), allow Gradle sync, then run the app on an Android device.
 
 ## Local inference roadmap
-- Complete graph/session integration and validated model-pack compatibility
+- Validate real model-pack compatibility and output correctness
 - Benchmark NNAPI/GPU paths and memory use on the POCO X6 Pro
-- Implement generation queue and persist outputs locally
+- Wire generation UI, queue, progress and gallery persistence
 
 Model binaries are not committed. Model acquisition must be user initiated and comply with each model's licence.
 
@@ -43,10 +43,11 @@ Prompt history and preference signals are intended to stay on device. Learning i
 - [x] Core DDIM denoising-loop orchestration with classifier-free guidance, progress callbacks and cancellation checks
 - [x] Seeded latent-noise initialization and float32 VAE decoder foundation
 - [x] Stable Diffusion UNet adapter mapping common sample, timestep and conditioning inputs
-- [x] Pipeline coordinator for prompt encoding, seeded latents, denoising, decode callback, progress and cancellation (unit-tested; graph integration pending)
+- [x] Pipeline coordinator for prompt encoding, seeded latents, denoising, decode callback, progress and cancellation
+- [x] ONNX model-pack session runtime integration wrapper
 - [x] Safe ZIP model-pack installer with manifest and optional SHA-256 verification
-- [ ] Model download/import UI with integrity verification
-- [ ] Generation queue and real progress
+- [ ] Validate real pack compatibility and device inference
+- [ ] Generation UI integration, queue and gallery persistence
 - [ ] Image-to-image
 - [ ] LoRA inference
 - [ ] Investigate on-device fine-tuning (experimental)
