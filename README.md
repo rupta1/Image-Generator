@@ -69,3 +69,14 @@ python tools/build_sd15_pack.py --root ~/stable-diffusion-v1-5-ONNX --out ~/sd15
 ```
 
 The pack may exceed 3 GB because the UNet graph uses external tensor data. The installer allows up to 6 GB unpacked (still bounded). Import only when sufficient storage is available. This packaging step is experimental and does not establish that generation works on-device.
+
+
+### Audit a generated pack before importing
+
+Run the archive audit after creating the pack ZIP. The validator checks the required flat file layout, graph keys, declared graph hashes, and external-data file references without loading tensor payloads into memory. ONNX Python is optional for the basic audit but required to inspect external-data references:
+
+```sh
+python tools/validate_sd15_pack.py ~/sd15-pack.zip
+```
+
+Use a desktop Python environment if the ONNX package cannot be installed in Termux. The audit is structural only; device inference remains unverified.
