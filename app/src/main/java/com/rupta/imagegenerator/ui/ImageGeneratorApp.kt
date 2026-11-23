@@ -146,6 +146,7 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
                     Text(progress.message.ifBlank { "Preparing model…" },fontWeight=FontWeight.Medium)
                     LinearProgressIndicator(progress={progress.fraction.coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),color=violet,trackColor=Color(0xFF3C344B))
                     Text("${progress.step} / ${progress.totalSteps} steps",fontSize=12.sp,color=Color.Gray)
+                    GhostLoadingPreview()
                     OutlinedButton(onClick={cancelFlag?.set(true)},modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Close,null);Spacer(Modifier.width(8.dp));Text("Cancel generation") }
                 }
             }
@@ -201,6 +202,18 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
     }
 }
 
+
+@Composable
+private fun GhostLoadingPreview() {
+    val transition=rememberInfiniteTransition(label="ghost shimmer")
+    val phase by transition.animateFloat(0f,1f,animationSpec=infiniteRepeatable(tween(1200,easing=LinearEasing),RepeatMode.Reverse),label="phase")
+    val shimmer=Brush.linearGradient(listOf(Color(0xFF232330),Color(0xFF3C3550).copy(alpha=0.4f+phase*0.6f),Color(0xFF232330)))
+    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp)).background(shimmer),contentAlignment=Alignment.Center){Icon(Icons.Default.AutoAwesome,null,tint=violet.copy(alpha=0.3f+phase*0.4f),modifier=Modifier.size(42.dp))}
+        Box(Modifier.fillMaxWidth(0.65f).height(12.dp).clip(CircleShape).background(shimmer))
+        Box(Modifier.fillMaxWidth(0.9f).height(9.dp).clip(CircleShape).background(shimmer))
+    }
+}
 @Composable
 private fun GalleryScreen(modifier:Modifier) {
     val context=LocalContext.current
