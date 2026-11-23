@@ -1,6 +1,8 @@
 package com.rupta.imagegenerator.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -18,6 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.rupta.imagegenerator.data.LocalLearning
+import com.rupta.imagegenerator.data.GalleryStore
+import com.rupta.imagegenerator.data.SavedCreation
 import com.rupta.imagegenerator.data.SignalKind
 import com.rupta.imagegenerator.engine.*
 import kotlinx.coroutines.*
@@ -92,8 +97,8 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically, modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
-                Text("IMAGE STUDIO", color=violet, letterSpacing=3.sp, fontSize=11.sp, fontWeight=FontWeight.Bold)
-                Text("Create something\\nextraordinary.", fontSize=29.sp, fontWeight=FontWeight.Bold, lineHeight=34.sp)
+                Text("IMAGE STUDIO  /  LOCAL AI", color=violet, letterSpacing=2.sp, fontSize=11.sp, fontWeight=FontWeight.Bold)
+                Text("Dream it.\\nCreate it.", fontSize=32.sp, fontWeight=FontWeight.ExtraBold, lineHeight=36.sp)
             }
             Box(Modifier.size(46.dp).clip(CircleShape).background(panel), contentAlignment=Alignment.Center) { Icon(Icons.Default.Bolt, "Local", tint=violet) }
         }
@@ -139,7 +144,7 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
             Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF241D35)),shape=RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(progress.message.ifBlank { "Preparing model…" },fontWeight=FontWeight.Medium)
-                    LinearProgressIndicator(progress=progress.fraction,modifier=Modifier.fillMaxWidth())
+                    LinearProgressIndicator(progress={progress.fraction.coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),color=violet,trackColor=Color(0xFF3C344B))
                     Text("${progress.step} / ${progress.totalSteps} steps",fontSize=12.sp,color=Color.Gray)
                     OutlinedButton(onClick={cancelFlag?.set(true)},modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Close,null);Spacer(Modifier.width(8.dp));Text("Cancel generation") }
                 }
@@ -162,7 +167,7 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
                                         onProgress={ p -> progress=p },isCancelled={flag.get()})
                                 }
                             }
-                            result=bitmap;status="Image generated locally."
+                            result=bitmap; withContext(Dispatchers.IO) { GalleryStore.save(context, bitmap) }; status="Image generated locally · saved to Gallery."
                         } catch(e:CancellationException) { status="Generation cancelled." }
                         catch(t:Throwable) { status="Generation failed: ${t.message ?: t.javaClass.simpleName}" }
                         finally { busy=false;cancelFlag=null }
@@ -177,8 +182,8 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
             Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Text("Generated image",fontWeight=FontWeight.SemiBold)
-                    Image(bitmap.asImageBitmap(),contentDescription="Generated image",modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)))
-                    Text("This result is currently held in memory; gallery saving is a later milestone.",fontSize=12.sp,color=Color.Gray)
+                    Image(bitmap.asImageBitmap(),contentDescription="Generated image",modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)))
+                    Text("Saved automatically to your local gallery.",fontSize=12.sp,color=Color.Gray)
                 }
             }
         }
@@ -198,19 +203,23 @@ private fun CreateScreen(modifier: Modifier, prompt:String, onPrompt:(String)->U
 
 @Composable
 private fun GalleryScreen(modifier:Modifier) {
-    Column(modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Text("YOUR GALLERY",color=violet,fontSize=11.sp,letterSpacing=3.sp)
-        Text("Creations",fontSize=28.sp,fontWeight=FontWeight.Bold)
-        Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
-            Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.ImageSearch,null,tint=violet,modifier=Modifier.size(56.dp))
-                Text("No generated images yet",fontWeight=FontWeight.SemiBold)
-                Text("Gallery persistence will be added in a later milestone.",color=Color.Gray,fontSize=13.sp)
+    val context=LocalContext.current
+    var creations by remember { mutableStateOf(GalleryStore.list(context)) }
+    var selected by remember { mutableStateOf<SavedCreation?>(null) }
+    var images by remember { mutableStateOf<Map<String,android.graphics.Bitmap>>(emptyMap()) }
+    LaunchedEffect(creations) { images=withContext(Dispatchers.IO){creations.mapNotNull{entry->GalleryStore.load(entry.file)?.let{entry.file.absolutePath to it}}.toMap()} }
+    Column(modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("YOUR COLLECTION",color=violet,fontSize=11.sp,letterSpacing=2.sp);Text("Gallery",fontSize=30.sp,fontWeight=FontWeight.ExtraBold)};IconButton(onClick={creations=GalleryStore.list(context)}){Icon(Icons.Default.Refresh,null,tint=violet)}}
+        Text("${creations.size} saved creations · stored on device",color=Color.Gray,fontSize=12.sp)
+        if(creations.isEmpty()) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)){Icon(Icons.Default.PhotoLibrary,null,tint=violet,modifier=Modifier.size(58.dp));Text("Your gallery is waiting",fontWeight=FontWeight.Bold);Text("Generated images save here automatically.",color=Color.Gray,fontSize=12.sp)}}
+        else LazyVerticalGrid(columns=GridCells.Fixed(2),modifier=Modifier.weight(1f),contentPadding=PaddingValues(bottom=12.dp),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            items(creations,key={it.file.absolutePath}){entry->val bitmap=images[entry.file.absolutePath]
+                Card(shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=panel),modifier=Modifier.clickable{selected=entry}){Column{if(bitmap!=null)Image(bitmap.asImageBitmap(),null,modifier=Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp)))else Box(Modifier.fillMaxWidth().aspectRatio(1f).background(panel));Text(java.text.SimpleDateFormat("MMM d · HH:mm",java.util.Locale.getDefault()).format(java.util.Date(entry.createdAt)),modifier=Modifier.padding(10.dp),fontSize=11.sp,color=Color.Gray)}}
             }
         }
     }
+    selected?.let{entry->images[entry.file.absolutePath]?.let{bitmap->AlertDialog(onDismissRequest={selected=null},containerColor=panel,title={Text("Creation")},text={Image(bitmap.asImageBitmap(),null,modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)))},confirmButton={TextButton(onClick={selected=null}){Text("Close")}},dismissButton={TextButton(onClick={GalleryStore.delete(entry.file);selected=null;creations=GalleryStore.list(context)}){Text("Delete",color=MaterialTheme.colorScheme.error)}}})}
 }
-
 @Composable
 private fun PersonalizeScreen(modifier:Modifier, learning:Boolean, onLearning:(Boolean)->Unit, count:Int, styles:Map<String,Int>, keywords:Map<String,Int>, negative:Map<String,Int>, onClear:()->Unit) {
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
