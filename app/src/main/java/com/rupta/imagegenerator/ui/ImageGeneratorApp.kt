@@ -231,7 +231,19 @@ private fun GalleryScreen(modifier:Modifier) {
             }
         }
     }
-    selected?.let{entry->images[entry.file.absolutePath]?.let{bitmap->AlertDialog(onDismissRequest={selected=null},containerColor=panel,title={Text("Creation")},text={Image(bitmap.asImageBitmap(),null,modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)))},confirmButton={TextButton(onClick={selected=null}){Text("Close")}},dismissButton={TextButton(onClick={GalleryStore.delete(entry.file);selected=null;creations=GalleryStore.list(context)}){Text("Delete",color=MaterialTheme.colorScheme.error)}}})}
+    selected?.let { entry ->
+        val bitmap = images[entry.file.absolutePath]
+        if (bitmap != null) {
+            AlertDialog(
+                onDismissRequest = { selected = null },
+                containerColor = panel,
+                title = { Text("Creation") },
+                text = { Image(bitmap.asImageBitmap(), contentDescription = "Saved image", modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))) },
+                confirmButton = { TextButton(onClick = { selected = null }) { Text("Close") } },
+                dismissButton = { TextButton(onClick = { GalleryStore.delete(entry.file); selected = null; creations = GalleryStore.list(context) }) { Text("Delete", color = MaterialTheme.colorScheme.error) } }
+            )
+        }
+    }
 }
 @Composable
 private fun PersonalizeScreen(modifier:Modifier, learning:Boolean, onLearning:(Boolean)->Unit, count:Int, styles:Map<String,Int>, keywords:Map<String,Int>, negative:Map<String,Int>, onClear:()->Unit) {
