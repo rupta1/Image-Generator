@@ -3,9 +3,16 @@ package com.rupta.imagegenerator.engine
 import android.app.ActivityManager
 import android.content.Context
 
-/** Conservative RAM gate to avoid attempting a multi-gigabyte ONNX load during system memory pressure. */
+/**
+ * Lightweight launch gate: removes the old 5 GB requirement, but avoids starting
+ * a very large graph load when Android is already under severe memory pressure.
+ * This is a preflight estimate, not a hard native-memory cap.
+ */
 object MemorySafety {
     data class Snapshot(val totalBytes: Long, val availableBytes: Long, val lowMemory: Boolean)
+
+    private const val MB = 1024L * 1024L
+    private const val MIN_AVAILABLE_MB = 1800L
 
     fun snapshot(context: Context): Snapshot {
         val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -14,10 +21,17 @@ object MemorySafety {
         return Snapshot(info.totalMem, info.availMem, info.lowMemory)
     }
 
-    fun requireSafeToLoad(context: Context, minimumAvailableBytes: Long = 5L * 1024 * 1024 * 1024) {
+    fun requireSafeToLoad(context: Context, minimumAvailableBytes: Long = MIN_AVAILABLE_MB * MB) {
         val s = snapshot(context)
+        val availableMb = s.availableBytes / MB
         require(!s.lowMemory && s.availableBytes >= minimumAvailableBytes) {
-            "Not enough free RAM to safely load Stable Diffusion. Android currently reports ${s.availableBytes / (1024 * 1024)} MB available. Close other apps and retry only when at least 5 GB RAM is available. This model may still exceed device memory."
+            "Generation paused to protect Android from a memory crash. Available RAM: ${availableMb} MB. " +
+                "The old 5 GB gate is removed; this pack still needs a reasonable free-memory reserve. " +
+                "Close background apps and retry when at least ${minimumAvailableBytes / MB} MB is available. " +
+                "A reserve check cannot guarantee the model's peak RAM usage."
         }
     }
+
+    /** Use from UI diagnostics only; never force-kill apps or clear unrelated user data. */
+    fun availableMb(context: Context): Long = snapshot(context).availableBytes / MB
 }
