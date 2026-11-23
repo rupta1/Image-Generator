@@ -82,6 +82,10 @@ python tools/validate_sd15_pack.py ~/sd15-pack.zip
 Use a desktop Python environment if the ONNX package cannot be installed in Termux. The audit is structural only; device inference remains unverified.
 
 
+## Memory safeguards and realistic RAM expectations
+
+The previous hard 5 GB available-RAM gate has been replaced by a smaller 1.8 GB reserve check to avoid unnecessarily blocking generation on devices with less free memory. This is only a preflight reserve check; it is **not a hard 1–2 GB peak-memory cap**. ONNX Runtime may map or allocate the full UNet weights and working tensors, and the current FP32 SD1.5 UNet external weights are about 3.4 GB. A strict 1–2 GB peak requires a compatible smaller/quantized model and/or a runtime architecture that releases graph sessions between stages or streams weights; the current pipeline does not guarantee this. Large inference may still cause Android to kill the app or stall the device.
+
 ## Experimental UNet dynamic quantization
 
 An experimental helper is available at `tools/quantize_sd15_unet.py`. It attempts dynamic weight quantization using ONNX Runtime. Quantization may take substantial RAM and storage, can fail for graphs with external tensor data, and is not yet validated on Android. It creates a separate graph and never overwrites the source. Install the Python dependencies in a suitable desktop/Linux environment (`pip install onnx onnxruntime`) and run:
